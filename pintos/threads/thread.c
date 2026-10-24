@@ -28,6 +28,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/*sleep list 추가*/
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
