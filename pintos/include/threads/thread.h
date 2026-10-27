@@ -135,6 +135,9 @@ void thread_exit (void) NO_RETURN;
 void thread_yield (void);
 void thread_sleep (int64_t wake_tick);
 void thread_wake_up(int64_t tick);
+void thread_preempt(void);
+
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
