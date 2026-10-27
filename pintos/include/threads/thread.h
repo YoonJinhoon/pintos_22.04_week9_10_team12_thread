@@ -96,6 +96,9 @@ struct thread {
 	/* tick wakeup_time 추가 */
 	int64_t wakeup_time;
 
+
+	
+
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
