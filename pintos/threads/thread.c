@@ -355,6 +355,10 @@ thread_wake_up (int64_t tick) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+
+	if (!list_empty (&ready_list) &&
+		list_entry (list_front (&ready_list), struct thread, elem)->priority > thread_current ()->priority)
+		thread_yield();
 }
 
 /* Returns the current thread's priority. */
