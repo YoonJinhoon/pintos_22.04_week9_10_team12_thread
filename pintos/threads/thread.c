@@ -29,8 +29,9 @@
 struct list ready_list;
 
 /*sleep list 추가*/
-static struct list sleep_list;
-
+//static struct list sleep_list;
+/*원래 우선 순위 추가*/
+//int init_priority;
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -324,17 +325,24 @@ thread_yield (void) {
 	intr_set_level (old_level);
 }
 
-/* Sets the current thread's priority to NEW_PRIORITY. */
+/* Sets the current thread's priority to NEW_PRIORITY.
+기부받은 값이 더 높으면 우선순위 그게 유지되게해야함 */
 void
 thread_set_priority (int new_priority) {
-thread_current ()->priority = new_priority;
-
-if(!list_empty(&ready_list))
-{ struct thread	*r = list_entry(list_front(&ready_list),struct thread,elem);
-	if (r->priority > thread_current()->priority)
-	{
-		thread_yield();
-	}
+struct thread *p =thread_current();
+p->init_priority = new_priority;
+p->priority = p->init_priority;//우선순위 초기화
+if (!list_empty(&p->donation)) //기부자 목록 빌때까지 반복
+{       /*기부자 목록 우선순위 vs 현재 스레드 우선순위 비교*/
+	struct thread *dp = list_entry(list_front(&p->donation),struct thread,donation_elem);
+	if (dp->priority > p->priority)
+	   { p->priority = dp->priority;}
+}        /*레디 리스트 목록 우선순위 vs 현재 스레드 우선순위 비교*/
+	if(!list_empty(&ready_list))
+{       struct thread *r = list_entry(list_front(&ready_list),
+	struct thread,elem);
+	if (r->priority > p->priority)
+	{thread_yield();}
 }
 }
 
@@ -433,6 +441,11 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->magic = THREAD_MAGIC;
+	t->init_priority = priority;
+	t->wait_on_lock = NULL;
+	list_init(&t->donation);
+
+
 }
 
 /* Chooses and returns the next thread to be scheduled.  Should
