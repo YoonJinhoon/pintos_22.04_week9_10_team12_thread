@@ -246,6 +246,16 @@ struct semaphore_elem {
 	struct semaphore semaphore;         /* This semaphore. */
 };
 
+/* 대기표 두 개를, 그 안에서 기다리는 스레드의 우선순위로 비교한다 (큰 쪽이 앞) */
+static bool
+cmp_sema_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+	struct semaphore_elem *sa = list_entry (a, struct semaphore_elem, elem);
+	struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+	struct thread *ta = list_entry(list_front(&sa->semaphore.waiters), struct thread, elem);
+	struct thread *tb = list_entry(list_front(&sb->semaphore.waiters), struct thread, elem);
+	return ta->priority > tb->priority;
+}
+
 /* Initializes condition variable COND.  A condition variable
    allows one piece of code to signal a condition and cooperating
    code to receive the signal and act upon it. */
@@ -292,6 +302,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	lock_acquire (lock);
 }
 
+
 /* If any threads are waiting on COND (protected by LOCK), then
    this function signals one of them to wake up from its wait.
    LOCK must be held before calling this function.
@@ -306,9 +317,11 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
 
-	if (!list_empty (&cond->waiters))
-		sema_up (&list_entry (list_pop_front (&cond->waiters),
-					struct semaphore_elem, elem)->semaphore);
+	if (!list_empty (&cond->waiters)) {
+		list_sort(&cond->waiters, cmp_sema_priority, NULL);
+		sema_up(&list_entry(list_pop_front(&cond->waiters),
+				struct semaphore_elem, elem)->semaphore);
+	}
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by
