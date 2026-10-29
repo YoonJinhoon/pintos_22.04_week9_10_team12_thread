@@ -92,6 +92,14 @@ struct thread {
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 
+	int64_t wakeup_ticks;
+
+	int base_priority;					//원래 가지고 있던 우선순위
+	struct lock *waiting_lock;			//얻으려고 대기 중인 락
+	struct list donations;				//우선순위를 기부해 준 스레드들의 리스트
+	struct list_elem donation_elem;		//donations list를 위한 elem
+	struct semaphore *blocked_on;		//현재 대기 중인 세마포어
+
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
@@ -108,6 +116,8 @@ struct thread {
 	struct intr_frame tf;               /* Information for switching */
 	unsigned magic;                     /* Detects stack overflow. */
 };
+
+
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -132,9 +142,13 @@ const char *thread_name (void);
 
 void thread_exit (void) NO_RETURN;
 void thread_yield (void);
+void cpu_preempt(void);
 
 int thread_get_priority (void);
 void thread_set_priority (int);
+void thread_sleep(int64_t ticks);
+void thread_wakeup(int64_t ticks);
+
 
 int thread_get_nice (void);
 void thread_set_nice (int);
@@ -142,5 +156,11 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
+
+extern struct list sleep_list;
+bool priority_sort(const struct list_elem *a, const struct list_elem *b, void *aux);
+
+void thread_update_priority (struct thread *t);
+bool donation_priority_sort (const struct list_elem *a, const struct list_elem *b, void *aux);	
 
 #endif /* threads/thread.h */
