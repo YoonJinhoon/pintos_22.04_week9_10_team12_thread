@@ -380,7 +380,8 @@ thread_restore_priority (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+	thread_current ()->base_priority = new_priority;
+	thread_current()->priority = new_priority;
 
 	if (!list_empty (&ready_list) &&
 		list_entry (list_front (&ready_list), struct thread, elem)->priority > thread_current ()->priority)
