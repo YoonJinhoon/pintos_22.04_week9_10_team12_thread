@@ -179,6 +179,7 @@ thread_print_stats (void) {
    PRIORITY, but no actual priority scheduling is implemented.
    Priority scheduling is the goal of Problem 1-3. */
 tid_t
+
 thread_create (const char *name, int priority,
 		thread_func *function, void *aux) {
 	struct thread *t;
@@ -358,6 +359,24 @@ thread_preempt (void) {
 		thread_yield();
 }
 
+void
+thread_donate_priority (struct thread *holder) {
+	enum intr_level old_level = intr_disable();
+	struct thread *cur = thread_current();
+
+	if (cur->priority > holder->priority) {
+		holder->priority = cur->priority;
+		list_sort(&ready_list, cmp_priority, NULL);
+	}
+	intr_set_level(old_level);
+}
+
+void 
+thread_restore_priority (void) {
+	struct thread *cur = thread_current();
+	cur->priority = cur->base_priority;
+}
+
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
@@ -462,6 +481,7 @@ init_thread (struct thread *t, const char *name, int priority) {
 	strlcpy (t->name, name, sizeof t->name);
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
+	t->base_priority = priority;
 	t->magic = THREAD_MAGIC;
 }
 

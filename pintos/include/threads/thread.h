@@ -91,6 +91,7 @@ struct thread {
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
+	int base_priority;
 	int64_t wake_up;
 
 	/* Shared between thread.c and synch.c. */
@@ -136,6 +137,8 @@ void thread_yield (void);
 void thread_sleep (int64_t wake_tick);
 void thread_wake_up(int64_t tick);
 void thread_preempt(void);
+void thread_donate_priority(struct thread *holder);
+void thread_restore_priority(void);
 
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux);
 
