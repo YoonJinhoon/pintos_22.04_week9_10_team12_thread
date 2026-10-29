@@ -79,7 +79,7 @@ main (void) {
 
 	/* Initialize ourselves as a thread so we can use locks,
 	   then enable console locking. */
-	thread_init ();
+	thread_init ();	// 커널의 메인 실행 흐름을 스레드로 전환
 	console_init ();
 
 	/* Initialize memory system. */
@@ -94,7 +94,9 @@ main (void) {
 
 	/* Initialize interrupt handlers. */
 	intr_init ();
-	timer_init ();
+// 타이머 하드웨어와 tick 인터럽트가 시작됌
+// timer_interrupt() 가 매 틱마다 호출되면서, sleep list 를 깨우거나 MLFQS 의 우선순위를 재계산하는 흐름을 추적할 때 출발점
+	timer_init ();	
 	kbd_init ();
 	input_init ();
 #ifdef USERPROG
@@ -102,7 +104,7 @@ main (void) {
 	syscall_init ();
 #endif
 	/* Start thread scheduler and enable interrupts. */
-	thread_start ();
+	thread_start ();	// idle 스레드를 생성
 	serial_init_queue ();
 	timer_calibrate ();
 
@@ -119,7 +121,7 @@ main (void) {
 	printf ("Boot complete.\n");
 
 	/* Run actions specified on kernel command line. */
-	run_actions (argv);
+	run_actions (argv);	// 테스트 함수들을 실행시키는 지점
 
 	/* Finish up. */
 	if (power_off_when_done)

@@ -238,6 +238,13 @@ cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNU
 	return (A->priority) > (B->priority);
 }
 
+bool
+cmp_donation_priority (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+	struct thread *A = list_entry (a, struct thread, donation_elem);
+	struct thread *B = list_entry(b, struct thread, donation_elem);
+	return A->priority > B->priority;
+}
+
 /* Transitions a blocked thread T to the ready-to-run state.
    This is an error if T is not blocked.  (Use thread_yield() to
    make the running thread ready.)
@@ -363,6 +370,7 @@ void
 thread_donate_priority (struct thread *holder) {
 	enum intr_level old_level = intr_disable();
 	struct thread *cur = thread_current();
+	list_insert_ordered(&holder->donations, &cur->donation_elem, cmp_donation_priority, NULL);
 
 	if (cur->priority > holder->priority) {
 		holder->priority = cur->priority;
@@ -372,9 +380,27 @@ thread_donate_priority (struct thread *holder) {
 }
 
 void 
-thread_restore_priority (void) {
+thread_restore_priority (struct lock *lock) {
+	enum intr_level old_level = intr_disable();
 	struct thread *cur = thread_current();
+
+	struct list_elem *e = list_begin(&cur->donations);
+	while (e != list_end (&cur->donations)) {
+		struct thread *t = list_entry(e, struct thread, donation_elem);
+		if (t->wait_on_lock == lock)
+			e = list_remove(e);
+		else
+			e = list_next(e);
+	}
+
 	cur->priority = cur->base_priority;
+
+	if (!list_empty (&cur->donations)) {
+		struct thread *top = list_entry(list_front(&cur->donations), struct thread, donation_elem);
+		if (top->priority > cur->priority)
+			cur->priority = top->priority;
+	}
+	intr_set_level(old_level);
 }
 
 /* Sets the current thread's priority to NEW_PRIORITY. */
@@ -483,6 +509,8 @@ init_thread (struct thread *t, const char *name, int priority) {
 	t->tf.rsp = (uint64_t) t + PGSIZE - sizeof (void *);
 	t->priority = priority;
 	t->base_priority = priority;
+	list_init(&t->donations);
+	t->wait_on_lock = NULL;
 	t->magic = THREAD_MAGIC;
 }
 
