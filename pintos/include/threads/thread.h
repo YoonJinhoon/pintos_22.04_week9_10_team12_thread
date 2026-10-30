@@ -100,6 +100,9 @@ struct thread {
 	struct lock *wait_on_lock;//내가 기다리는 락
 	struct list donation;//기부한 리스트
 	struct list_elem donation_elem;	//기부한 리스트 요소
+        struct list total_thread;//레디,실행중,대기중인 모든 스레드 리스트
+	struct list_elem total_elem;
+
 	
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
