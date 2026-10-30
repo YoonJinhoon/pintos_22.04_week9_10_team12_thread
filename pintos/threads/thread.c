@@ -372,9 +372,13 @@ thread_donate_priority (struct thread *holder) {
 	struct thread *cur = thread_current();
 	list_insert_ordered(&holder->donations, &cur->donation_elem, cmp_donation_priority, NULL);
 
-	if (cur->priority > holder->priority) {
-		holder->priority = cur->priority;
-		list_sort(&ready_list, cmp_priority, NULL);
+	struct thread *t = thread_current();
+	for (t; t->wait_on_lock != NULL; t = t->wait_on_lock->holder) {
+		if (t->priority > t->wait_on_lock->holder->priority)
+		{
+			t->wait_on_lock->holder->priority = t->priority;
+			list_sort(&ready_list, cmp_priority, NULL);
+		}
 	}
 	intr_set_level(old_level);
 }
