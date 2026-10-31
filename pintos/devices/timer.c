@@ -143,8 +143,18 @@ timer_print_stats (void) {
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;//부팅후 지난 틱수 +1 (os의 현재 시각)
-	
-	/*함수 추가
+	if (thread_mlfqs){
+		inc_cpu();
+
+	if(ticks % 4 == 0 ){
+	total_thread_priority();
+}
+	if(ticks % TIMER_FREQ == 0 ){
+		calculate_load_avg();
+		total_thread_calculate();
+	}
+}
+        /*함수 추가
 	잠든 스레드 목록과 잠든애들중 가장 빨리 깰 시각을 확인하고
 	깰 시간이 된 스레드를 찾고 있으면 레디 목록으로 옮기기
 	남은애들 기준으로 가장 빨리 깰 시각 된 얘들 다시 계산*/

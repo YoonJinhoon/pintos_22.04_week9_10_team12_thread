@@ -202,19 +202,18 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
         struct thread *t = thread_current();
-        if (lock->holder != NULL){
+        if (thread_mlfqs == false &&lock->holder != NULL){
 	t->wait_on_lock = lock;
 	list_insert_ordered(&lock->holder->donation,&t->donation_elem,wait_pr,NULL);
 	if(t->priority > lock->holder->priority)
         lock->holder->priority = t->priority;
-       /*내 우선순위가 홀더의 우선순위보다 높으면*/
-       
+       /*내 우선순위가 홀더의 우선순위보다 높으면*/ 
 	/*내가 기다리는 사람->그사람이 기다리는 사람->따라 올라가면서 전원에게 내 우선순위를 기부하는 것
 	지금 그사람에게 기부 그사람의  wait_on_lock을 보고 다음 사람으로 이동 멈추는 조건 다음 기다리는 락이 없을때 깊이가 8이 넘었을때 최대 8번이동*/
 	int i = 0;
 	struct thread *curr_holder = lock->holder;
 	struct thread *temp_holder = NULL;//내다음사람의 리스트 잠시담을변수
-      while ((curr_holder->wait_on_lock != NULL) && i < 8)
+        while ((curr_holder->wait_on_lock != NULL) && i < 8)
        //다음 사람으로 이동
       { temp_holder = curr_holder->wait_on_lock->holder;
 	
@@ -265,6 +264,7 @@ lock_release (struct lock *lock) {
 	struct list_elem *d;//elem 담을 임시 변수
 	struct thread *tmp;//스레드 담을 임시변수
 	/*기부명단 처음부터 끝까지 훑으면서*/
+	if (thread_mlfqs == false){
         for (d = list_begin(&t->donation); d !=list_end(&t->donation);){
 	/*스레드랑 wait_on_lock에있는 스레드랑 같으면 기부 요소 명단에서 삭제*/
         tmp = list_entry(d,struct thread,donation_elem);
@@ -279,7 +279,7 @@ lock_release (struct lock *lock) {
 		if (dnt->priority > t->priority)
 		{ t->priority = dnt->priority; }
 	}
-	lock->holder = NULL;
+	}	lock->holder = NULL;
 	sema_up (&lock->semaphore);
 }
 

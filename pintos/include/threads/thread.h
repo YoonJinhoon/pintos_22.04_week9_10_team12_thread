@@ -102,7 +102,8 @@ struct thread {
 	struct list_elem donation_elem;	//기부한 리스트 요소
         struct list total_thread;//레디,실행중,대기중인 모든 스레드 리스트
 	struct list_elem total_elem;
-
+	int nice;
+        int recent_cpu;
 	
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
@@ -154,4 +155,12 @@ void do_iret (struct intr_frame *tf);
 /**/
 void thread_sleep(int64_t ticks);
 bool compare_pr(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
+void total_thread_priority (void);
+void total_thread_calculate (void);
+void inc_cpu (void);
+void calculate_recent_cpu (struct thread *t);
+int calculate_load_avg(void);
+
+
 #endif /* threads/thread.h */
