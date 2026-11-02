@@ -383,6 +383,19 @@ thread_donate_priority (struct thread *holder) {
 	intr_set_level(old_level);
 }
 
+void
+thread_update_priority (void) {
+	struct thread *cur = thread_current();
+	cur->priority = cur->base_priority;
+
+	if (!list_empty(&cur->donations))
+	{
+		struct thread *top = list_entry(list_front(&cur->donations), struct thread, donation_elem);
+		if (top->priority > cur->priority)
+			cur->priority = top->priority;
+	}
+}
+
 void 
 thread_restore_priority (struct lock *lock) {
 	enum intr_level old_level = intr_disable();
@@ -397,13 +410,7 @@ thread_restore_priority (struct lock *lock) {
 			e = list_next(e);
 	}
 
-	cur->priority = cur->base_priority;
-
-	if (!list_empty (&cur->donations)) {
-		struct thread *top = list_entry(list_front(&cur->donations), struct thread, donation_elem);
-		if (top->priority > cur->priority)
-			cur->priority = top->priority;
-	}
+	thread_update_priority();
 	intr_set_level(old_level);
 }
 
@@ -411,7 +418,7 @@ thread_restore_priority (struct lock *lock) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->base_priority = new_priority;
-	thread_current()->priority = new_priority;
+	thread_update_priority();
 
 	if (!list_empty (&ready_list) &&
 		list_entry (list_front (&ready_list), struct thread, elem)->priority > thread_current ()->priority)
