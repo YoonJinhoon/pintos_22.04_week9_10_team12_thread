@@ -11,6 +11,7 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "intrinsic.h"
+#include "devices/timer.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -28,6 +29,7 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 static struct list sleep_list;
+static int load_avg;
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -79,6 +81,36 @@ static tid_t allocate_tid (void);
 // Because the gdt will be setup after the thread_init, we should
 // setup temporal gdt first.
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
+
+int int_to_fp(int x)
+{
+	return x * 16384;
+}
+
+int fp_to_int(int x)
+{
+	return x / 16384;
+}
+
+int add_fp(int a, int b)
+{
+	return a + b;
+}
+
+int mul_fp_int(int fp_a, int int_b)
+{
+	return fp_a * int_b;
+}
+
+int div_fp_int(int fp_a, int int_b)
+{
+	return fp_a / int_b;
+}
+
+int mul_fp(int a, int b)
+{
+	return (int64_t)a * b / 16384;
+}
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -150,6 +182,15 @@ thread_tick (void) {
 #endif
 	else
 		kernel_ticks++;
+
+	if (timer_ticks () % TIMER_FREQ == 0) {
+		int snapshot = list_size(&ready_list);
+		if (thread_current () != idle_thread)
+			snapshot += 1;
+		int a = div_fp_int(int_to_fp(59), 60);
+		int b = div_fp_int(int_to_fp(1), 60);
+		load_avg = add_fp(mul_fp(a, load_avg), mul_fp_int(b, snapshot));
+	}
 
 	/* Enforce preemption. */
 	if (++thread_ticks >= TIME_SLICE)
@@ -448,7 +489,7 @@ thread_get_nice (void) {
 int
 thread_get_load_avg (void) {
 	/* TODO: Your implementation goes here */
-	return 0;
+	return fp_to_int(mul_fp_int(load_avg, 100));
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
