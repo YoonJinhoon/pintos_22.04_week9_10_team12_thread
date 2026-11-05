@@ -91,10 +91,20 @@ struct thread {
 	enum thread_status status;          /* Thread state. */
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
-
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
-
+	/* tick wakeup_time 추가 */
+	int64_t wakeup_time;
+	/*도네이션 구조체 설정*/
+	int init_priority;//원래 우선순위 기부 받기 전
+	struct lock *wait_on_lock;//내가 기다리는 락
+	struct list donation;//기부한 리스트
+	struct list_elem donation_elem;	//기부한 리스트 요소
+        struct list total_thread;//레디,실행중,대기중인 모든 스레드 리스트
+	struct list_elem total_elem;
+	int nice;
+        int recent_cpu;
+	
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -142,5 +152,15 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
+/**/
+void thread_sleep(int64_t ticks);
+bool compare_pr(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
+void total_thread_priority (void);
+void total_thread_calculate (void);
+void inc_cpu (void);
+void calculate_recent_cpu (struct thread *t);
+int calculate_load_avg(void);
+
 
 #endif /* threads/thread.h */

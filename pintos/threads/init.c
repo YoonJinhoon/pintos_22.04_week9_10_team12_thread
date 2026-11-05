@@ -81,7 +81,7 @@ main (void) {
 	   then enable console locking. */
 	thread_init ();
 	console_init ();
-
+    
 	/* Initialize memory system. */
 	mem_end = palloc_init ();
 	malloc_init ();
@@ -102,7 +102,7 @@ main (void) {
 	syscall_init ();
 #endif
 	/* Start thread scheduler and enable interrupts. */
-	thread_start ();
+        thread_start ();	
 	serial_init_queue ();
 	timer_calibrate ();
 

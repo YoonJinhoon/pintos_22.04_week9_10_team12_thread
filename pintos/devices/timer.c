@@ -28,6 +28,8 @@ static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
+static struct list sleep_list;
+//static struct list ready_list;
 
 /* Sets up the 8254 Programmable Interval Timer (PIT) to
    interrupt PIT_FREQ times per second, and registers the
@@ -43,8 +45,15 @@ timer_init (void) {
 	outb (0x40, count >> 8);
 
 	intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+	list_init (&sleep_list);
 }
+/*tick 비교함수 */
+static bool compare_ticks(const struct list_elem *a,const struct list_elem *b,void *aux UNUSED)
 
+{ struct thread *ta = list_entry(a,struct thread,elem);
+  struct thread *tb = list_entry(b,struct thread,elem);
+  return ta->wakeup_time < tb->wakeup_time;
+}
 /* Calibrates loops_per_tick, used to implement brief delays. */
 void
 timer_calibrate (void) {
@@ -82,7 +91,7 @@ timer_ticks (void) {
 
 /* Returns the number of timer ticks elapsed since THEN, which
    should be a value once returned by timer_ticks(). */
-int64_t
+int64_t /*then 이후 몇 틱 지났는지*/
 timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
@@ -90,11 +99,20 @@ timer_elapsed (int64_t then) {
 /* Suspends execution for approximately TICKS timer ticks. */
 void
 timer_sleep (int64_t ticks) {
+	struct thread *curr = thread_current ();
 	int64_t start = timer_ticks ();
-
+	curr->wakeup_time = start+ticks;
+	enum intr_level old_level;
+	
 	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+	if (ticks <= 0){
+		return;}
+
+        old_level = intr_disable ();
+        list_insert_ordered(&sleep_list,&curr->elem,compare_ticks,NULL);
+        thread_block ();
+        intr_set_level (old_level);
+		//thread_yield ();
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -124,8 +142,39 @@ timer_print_stats (void) {
 /* Timer interrupt handler. */
 static void
 timer_interrupt (struct intr_frame *args UNUSED) {
-	ticks++;
-	thread_tick ();
+	ticks++;//부팅후 지난 틱수 +1 (os의 현재 시각)
+	if (thread_mlfqs){
+		inc_cpu();
+
+	if(ticks % 4 == 0 ){
+	total_thread_priority();
+}
+	if(ticks % TIMER_FREQ == 0 ){
+		calculate_load_avg();
+		total_thread_calculate();
+	}
+}
+        /*함수 추가
+	잠든 스레드 목록과 잠든애들중 가장 빨리 깰 시각을 확인하고
+	깰 시간이 된 스레드를 찾고 있으면 레디 목록으로 옮기기
+	남은애들 기준으로 가장 빨리 깰 시각 된 얘들 다시 계산*/
+	
+	while (!list_empty(&sleep_list))//sleep list 빌때까지
+	{
+                /*elem 연결리스트에있는 첫번째 주소를 스레드 구조체로 바꾼 주소를 t에 대입 */
+		struct thread *t =list_entry(list_front(&sleep_list),struct thread,elem); 
+
+		if (t->wakeup_time > ticks)
+		{ break;} //깨어날 시간 안됐으면 멈추기
+
+		list_pop_front(&sleep_list);
+
+		thread_unblock(t);
+	}
+	 
+	thread_tick ();//지금 돌고있는 스레드의 cpu 사용시간 갱신
+
+
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
